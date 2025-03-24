@@ -31,7 +31,14 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Surf Spot'),
         centerTitle: true,
       ),
-      body: _pages[_selectedIndex],
+      body: Container(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        color: Colors.blue,
+        child: SingleChildScrollView(
+            child: _pages[_selectedIndex]
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
