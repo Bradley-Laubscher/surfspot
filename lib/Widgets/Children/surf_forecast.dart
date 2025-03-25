@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:surfspot/API/fetch_surf_forecast.dart';
+import 'dart:math'; // For converting degrees to radians
 
 class SurfForecast extends StatefulWidget {
   const SurfForecast({super.key});
@@ -12,20 +13,13 @@ class _SurfForecastState extends State<SurfForecast> {
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(
-          minHeight: 250,
-          minWidth: 400
-      ),
+      constraints: const BoxConstraints(minHeight: 250, minWidth: 400),
       child: Container(
         margin: const EdgeInsets.only(top: 20),
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.black,
-            width: 1,
-            style: BorderStyle.solid,
-          ),
+          border: Border.all(color: Colors.black, width: 1, style: BorderStyle.solid),
         ),
         child: FutureBuilder<dynamic>(
           future: fetchSurfForecast(-33.9249, 18.4241), // Fetch forecast data
@@ -40,20 +34,32 @@ class _SurfForecastState extends State<SurfForecast> {
 
             final data = snapshot.data!;
             final waveHeights = data['hourly']['wave_height'];
+            final windDirections = data['hourly']['wind_wave_direction']; // Wave direction
+            final wavePeriods = data['hourly']['wave_period']; // Wave period
             final hours = data['hourly']['time']; // Hour timestamps
 
             // Group the data by day
-            List<List<dynamic>> groupedData = [];
-            List<dynamic> currentDay = [];
+            List<List<Map<String, dynamic>>> groupedData = [];
+            List<Map<String, dynamic>> currentDay = [];
             DateTime currentDayStart = DateTime.parse(hours[0]);
 
             for (int i = 0; i < waveHeights.length; i++) {
               DateTime timestamp = DateTime.parse(hours[i]);
               if (timestamp.day == currentDayStart.day) {
-                currentDay.add(waveHeights[i]);
+                currentDay.add({
+                  "height": waveHeights[i],
+                  "direction": windDirections[i],
+                  "period": wavePeriods[i],
+                  "time": timestamp
+                });
               } else {
                 groupedData.add(currentDay);
-                currentDay = [waveHeights[i]];
+                currentDay = [{
+                  "height": waveHeights[i],
+                  "direction": windDirections[i],
+                  "period": wavePeriods[i],
+                  "time": timestamp
+                }];
                 currentDayStart = timestamp;
               }
             }
@@ -62,7 +68,8 @@ class _SurfForecastState extends State<SurfForecast> {
             return ListView.builder(
               itemCount: groupedData.length,
               itemBuilder: (context, index) {
-                List<dynamic> dayData = groupedData[index];
+                List<Map<String, dynamic>> dayData = groupedData[index];
+                ScrollController _scrollController = ScrollController(); // Controller for the horizontal scrollbar
 
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -74,30 +81,45 @@ class _SurfForecastState extends State<SurfForecast> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       SizedBox(
-                        height: 80, // Set height to fit hourly data
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: dayData.length,
-                          itemBuilder: (context, hourIndex) {
-                            // Convert hourIndex to a time of day format
-                            DateTime timestamp = DateTime.parse(hours[hourIndex]);
-                            String timeOfDay = _formatTimeOfDay(timestamp);
+                        height: 110, // Increased height to fit scrollbar
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Scrollbar(
+                                controller: _scrollController,
+                                thumbVisibility: true,
+                                child: ListView.builder(
+                                  controller: _scrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: dayData.length,
+                                  itemBuilder: (context, hourIndex) {
+                                    DateTime timestamp = dayData[hourIndex]["time"];
+                                    String timeOfDay = _formatTimeOfDay(timestamp);
+                                    double height = dayData[hourIndex]["height"];
+                                    int direction = dayData[hourIndex]["direction"];
+                                    double period = dayData[hourIndex]["period"];
 
-                            return Container(
-                              width: 60,
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(timeOfDay), // Display time of day
-                                  Text(
-                                    "${dayData[hourIndex]} m",
-                                    style: TextStyle(fontSize: 12),
-                                  ),
-                                ],
+                                    return Container(
+                                      width: 80,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(timeOfDay), // Time of day
+                                          Text("${height.toStringAsFixed(1)} m", style: const TextStyle(fontSize: 12)), // Wave height
+                                          Transform.rotate(
+                                            angle: direction * (pi / 180), // Convert degrees to radians
+                                            child: const Icon(Icons.arrow_upward, size: 16),
+                                          ), // Rotated arrow for wave direction
+                                          Text("${period.toStringAsFixed(1)}s", style: const TextStyle(fontSize: 10)), // Wave period
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                            );
-                          },
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -123,12 +145,8 @@ class _SurfForecastState extends State<SurfForecast> {
       "Sunday"
     ];
 
-    // Get today's day index (1 for Monday, 7 for Sunday)
     int currentDayIndex = DateTime.now().weekday - 1; // 0 is Sunday, 6 is Saturday
-
-    // Calculate the day for the given index, accounting for wrapping around (cycling through days)
-    String day = daysOfTheWeek[(currentDayIndex + index) % 7];
-    return day;
+    return daysOfTheWeek[(currentDayIndex + index) % 7];
   }
 
   // Function to format the timestamp to time of day (e.g., 1 AM, 2 PM, etc.)
