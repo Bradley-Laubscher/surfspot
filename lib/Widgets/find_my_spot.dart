@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:surfspot/Widgets/Children/location_carousel.dart';
+import 'package:surfspot/Widgets/Children/surf_forecast.dart';
 
 class FindMySpot extends StatefulWidget {
   const FindMySpot({super.key});
@@ -37,10 +39,11 @@ class _FindMySpotState extends State<FindMySpot> {
       children: <Widget>[
         ConstrainedBox(
           constraints: const BoxConstraints(
-              minHeight: 200,
+              minHeight: 250,
               minWidth: 400
           ),
           child: Container(
+            margin: const EdgeInsets.only(top: 20),
             width: MediaQuery.of(context).size.width*0.6,
             height: MediaQuery.of(context).size.height*0.3,
             decoration: BoxDecoration(
@@ -62,6 +65,8 @@ class _FindMySpotState extends State<FindMySpot> {
             // ),
           ),
         ),
+        const LocationCarousel(),
+        const SurfForecast()
       ],
     );
   }
