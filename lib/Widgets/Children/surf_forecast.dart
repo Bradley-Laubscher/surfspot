@@ -146,7 +146,7 @@ class _SurfForecastState extends State<SurfForecast> {
     ];
 
     int currentDayIndex = DateTime.now().weekday - 1; // 0 is Sunday, 6 is Saturday
-    return daysOfTheWeek[(currentDayIndex + index) % 7];
+    return (index == 0) ? "Today" : daysOfTheWeek[(currentDayIndex + index) % 7];
   }
 
   // Function to format the timestamp to time of day (e.g., 1 AM, 2 PM, etc.)
