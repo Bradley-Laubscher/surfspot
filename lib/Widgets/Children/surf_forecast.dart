@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:surfspot/API/fetch_surf_forecast.dart';
-import 'dart:math'; // For converting degrees to radians
+import 'dart:math';
 
 class SurfForecast extends StatefulWidget {
   const SurfForecast({super.key});
@@ -15,7 +15,6 @@ class _SurfForecastState extends State<SurfForecast> {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 250, minWidth: 400),
       child: Container(
-        margin: const EdgeInsets.only(top: 20),
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(
@@ -69,7 +68,7 @@ class _SurfForecastState extends State<SurfForecast> {
               itemCount: groupedData.length,
               itemBuilder: (context, index) {
                 List<Map<String, dynamic>> dayData = groupedData[index];
-                ScrollController _scrollController = ScrollController(); // Controller for the horizontal scrollbar
+                ScrollController scrollController = ScrollController();
 
                 return Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -81,15 +80,15 @@ class _SurfForecastState extends State<SurfForecast> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       SizedBox(
-                        height: 110, // Increased height to fit scrollbar
+                        height: 110,
                         child: Column(
                           children: [
                             Expanded(
                               child: Scrollbar(
-                                controller: _scrollController,
+                                controller: scrollController,
                                 thumbVisibility: true,
                                 child: ListView.builder(
-                                  controller: _scrollController,
+                                  controller: scrollController,
                                   scrollDirection: Axis.horizontal,
                                   itemCount: dayData.length,
                                   itemBuilder: (context, hourIndex) {
