@@ -25,7 +25,8 @@ class _SurfForecastState extends State<SurfForecast> {
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.black, width: 1, style: BorderStyle.solid),
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.white
         ),
         child: FutureBuilder<dynamic>(
           future: fetchSurfForecast(latitude, longitude), // Fetch forecast data with the selected location's coordinates
