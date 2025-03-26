@@ -12,14 +12,14 @@ class LocationList extends StatefulWidget {
 
 class _LocationListState extends State<LocationList> {
   final ScrollController _scrollController = ScrollController();
-  int? _hoveredIndex; // ✅ Stores the index of the hovered item
+  int? _hoveredIndex;
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 170),
       child: SizedBox(
-        width: double.infinity,
+        width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.2,
         child: Scrollbar(
           controller: _scrollController,
@@ -43,9 +43,6 @@ class _LocationListState extends State<LocationList> {
                   child: GestureDetector(
                     onTap: () {
                       Provider.of<LocationProvider>(context, listen: false).setLocation(index);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("Selected: $locationName")),
-                      );
                     },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),

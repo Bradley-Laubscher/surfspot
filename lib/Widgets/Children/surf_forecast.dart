@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:surfspot/API/fetch_surf_forecast.dart';
+import 'package:provider/provider.dart';
 import 'dart:math';
+import 'package:surfspot/Providers/location_provider.dart';
 
 class SurfForecast extends StatefulWidget {
   const SurfForecast({super.key});
@@ -12,6 +14,11 @@ class SurfForecast extends StatefulWidget {
 class _SurfForecastState extends State<SurfForecast> {
   @override
   Widget build(BuildContext context) {
+    // Access the selected location from the provider
+    final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
+    final latitude = double.parse(selectedLocation["latitude"]);
+    final longitude = double.parse(selectedLocation["longitude"]);
+
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 250, minWidth: 400),
       child: Container(
@@ -21,7 +28,7 @@ class _SurfForecastState extends State<SurfForecast> {
           border: Border.all(color: Colors.black, width: 1, style: BorderStyle.solid),
         ),
         child: FutureBuilder<dynamic>(
-          future: fetchSurfForecast(-33.9249, 18.4241), // Fetch forecast data
+          future: fetchSurfForecast(latitude, longitude), // Fetch forecast data with the selected location's coordinates
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

@@ -13,9 +13,9 @@ class _HomePageState extends State<HomePage> {
 
   // Placeholder widgets for now
   final List<Widget> _pages = [
-    FindMySpot(), // FindMySpot()
-    DetailedForecast(), // DetailedForecast()
-    NotifyMe(), // NotifyMe()
+    const FindMySpot(),
+    const DetailedForecast(),
+    const NotifyMe(),
   ];
 
   void _onItemTapped(int index) {
