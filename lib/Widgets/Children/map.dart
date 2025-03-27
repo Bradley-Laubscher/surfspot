@@ -1,38 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:surfspot/Config/config.dart';
 
-class DestinationMap extends StatefulWidget {
+class DestinationMap extends StatelessWidget {
   const DestinationMap({super.key});
 
   @override
-  State<DestinationMap> createState() => _DestinationMapState();
-}
-
-class _DestinationMapState extends State<DestinationMap> {
-  @override
   Widget build(BuildContext context) {
-    late GoogleMapController mapController;
-    final LatLng _initialPosition = LatLng(-34.108856, 151.2093);
-
-    final Set<Marker> _surfSpots = {
-      Marker(
-        markerId: MarkerId('spot1'),
-        position: LatLng(-33.892, 151.256), // Example coordinates
-        infoWindow: InfoWindow(title: 'Bondi Beach', snippet: 'Great waves today!'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      ),
-      Marker(
-        markerId: MarkerId('spot2'),
-        position: LatLng(-33.728, 151.300),
-        infoWindow: InfoWindow(title: 'Manly Beach', snippet: 'Moderate swell'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-      ),
-    };
-
-    void _onMapCreated(GoogleMapController controller) {
-      mapController = controller;
-    }
-
     return ConstrainedBox(
       constraints: const BoxConstraints(
         minHeight: 250,
@@ -49,17 +24,31 @@ class _DestinationMapState extends State<DestinationMap> {
             style: BorderStyle.solid
           )
         ),
-        child: GoogleMap(
-          onMapCreated: _onMapCreated,
-          initialCameraPosition: CameraPosition(
-            target: _initialPosition,
-            zoom: 10.0,
+        child: FlutterMap(
+          options: const MapOptions(
+            initialCenter: LatLng(-34.008856, 18.581152),
+            initialZoom: 9.0,
           ),
-          markers: _surfSpots,
-          myLocationEnabled: true,
-          zoomControlsEnabled: false,
+          children: [
+            TileLayer(
+              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            ),
+            MarkerLayer(
+              markers: locations.map((spot) {
+                return Marker(
+                  point: LatLng(
+                    double.parse(spot["latitude"]),
+                    double.parse(spot["longitude"]),
+                  ),
+                  width: 40,
+                  height: 40,
+                  child: const Icon(Icons.location_on, color: Colors.red, size: 30),
+                );
+              }).toList(),
+            ),
+          ],
         ),
-      ),
+      )
     );
   }
 }
