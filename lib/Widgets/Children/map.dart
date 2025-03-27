@@ -6,12 +6,30 @@ import 'package:provider/provider.dart';
 import 'package:surfspot/Config/config.dart';
 import 'package:surfspot/Providers/location_provider.dart';
 
-class DestinationMap extends StatelessWidget {
+class DestinationMap extends StatefulWidget {
   const DestinationMap({super.key});
+
+  @override
+  State<DestinationMap> createState() => _DestinationMapState();
+}
+
+class _DestinationMapState extends State<DestinationMap> {
+  final MapController _mapController = MapController();
 
   @override
   Widget build(BuildContext context) {
     final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
+
+    // Move the map to the selected location when it changes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mapController.move(
+        LatLng(
+          double.parse(selectedLocation["latitude"]),
+          double.parse(selectedLocation["longitude"]),
+        ),
+        9.0,
+      );
+    });
 
     return ConstrainedBox(
       constraints: const BoxConstraints(
@@ -30,6 +48,7 @@ class DestinationMap extends StatelessWidget {
           ),
         ),
         child: FlutterMap(
+          mapController: _mapController,
           options: MapOptions(
             initialCenter: LatLng(
               double.parse(selectedLocation["latitude"]),
@@ -51,11 +70,11 @@ class DestinationMap extends StatelessWidget {
                     double.parse(spot["latitude"]),
                     double.parse(spot["longitude"]),
                   ),
-                  width: isSelected ? 50 : 40, // Highlight selected marker
+                  width: isSelected ? 50 : 40,
                   height: isSelected ? 50 : 40,
                   child: Icon(
                     Icons.location_on,
-                    color: isSelected ? Colors.blue : Colors.red, // Blue for selected marker
+                    color: isSelected ? Colors.blue : Colors.red, // Highlight selected marker
                     size: isSelected ? 40 : 30,
                   ),
                 );
