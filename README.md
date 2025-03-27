@@ -1,16 +1,7 @@
 # surfspot
 
-A surf forecast application
+A surf forecast application built using Dart and Flutter.
 
-## Getting Started
+The application makes use opf the Open-meteo's Marine Weather API to fetch up-to-date 
+surf conditions for common surf spots around Cape Town. 
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.

@@ -70,12 +70,38 @@ class _DestinationMapState extends State<DestinationMap> {
                     double.parse(spot["latitude"]),
                     double.parse(spot["longitude"]),
                   ),
-                  width: isSelected ? 50 : 40,
-                  height: isSelected ? 50 : 40,
-                  child: Icon(
-                    Icons.location_on,
-                    color: isSelected ? Colors.blue : Colors.red, // Highlight selected marker
-                    size: isSelected ? 40 : 30,
+                  width: 100,
+                  height: 50,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            spot["name"],
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Icon(
+                          Icons.location_on,
+                          color: isSelected ? Colors.blue : Colors.red,
+                          size: isSelected ? 40 : 30,
+                        ),
+                      ),
+                    ],
                   ),
                 );
               }).toList(),
