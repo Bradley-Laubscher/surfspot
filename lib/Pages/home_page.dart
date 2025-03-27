@@ -4,6 +4,8 @@ import 'package:surfspot/Widgets/find_my_spot.dart';
 import 'package:surfspot/Widgets/notify_me.dart';
 
 class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
