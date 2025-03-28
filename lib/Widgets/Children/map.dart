@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
@@ -16,13 +17,44 @@ class DestinationMap extends StatefulWidget {
 class _DestinationMapState extends State<DestinationMap> {
   final MapController _mapController = MapController();
 
+  void _animatedMove(MapController mapController, LatLng destLocation, double zoom) {
+    const int steps = 30;
+    const int duration = 500;
+    const double stepDuration = duration / steps;
+
+    LatLng currentCenter = mapController.camera.center;
+    double currentZoom = mapController.camera.zoom;
+
+    double latStep = (destLocation.latitude - currentCenter.latitude) / steps;
+    double lonStep = (destLocation.longitude - currentCenter.longitude) / steps;
+    double zoomStep = (zoom - currentZoom) / steps;
+
+    int currentStep = 0;
+
+    Timer.periodic(Duration(milliseconds: stepDuration.toInt()), (timer) {
+      if (currentStep >= steps) {
+        timer.cancel();
+      } else {
+        currentStep++;
+        mapController.move(
+          LatLng(
+            currentCenter.latitude + (latStep * currentStep),
+            currentCenter.longitude + (lonStep * currentStep),
+          ),
+          currentZoom + (zoomStep * currentStep),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
 
-    // Move the map to the selected location when it changes
+    // Smoothly animate to the selected location when it changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _mapController.move(
+      _animatedMove(
+        _mapController,
         LatLng(
           double.parse(selectedLocation["latitude"]),
           double.parse(selectedLocation["longitude"]),
