@@ -14,7 +14,6 @@ class SurfForecast extends StatefulWidget {
 class _SurfForecastState extends State<SurfForecast> {
   @override
   Widget build(BuildContext context) {
-    // Access the selected location from the provider
     final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
     final latitude = double.parse(selectedLocation["latitude"]);
     final longitude = double.parse(selectedLocation["longitude"]);
@@ -25,11 +24,11 @@ class _SurfForecastState extends State<SurfForecast> {
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: Colors.white
+            borderRadius: BorderRadius.circular(10),
+            color: Colors.white
         ),
         child: FutureBuilder<dynamic>(
-          future: fetchSurfForecast(latitude, longitude), // Fetch forecast data with the selected location's coordinates
+          future: fetchSurfForecast(latitude, longitude),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -41,11 +40,10 @@ class _SurfForecastState extends State<SurfForecast> {
 
             final data = snapshot.data!;
             final waveHeights = data['hourly']['wave_height'];
-            final windDirections = data['hourly']['wind_wave_direction']; // Wave direction
-            final wavePeriods = data['hourly']['wave_period']; // Wave period
-            final hours = data['hourly']['time']; // Hour timestamps
+            final windDirections = data['hourly']['wind_wave_direction'];
+            final wavePeriods = data['hourly']['wave_period'];
+            final hours = data['hourly']['time'];
 
-            // Group the data by day
             List<List<Map<String, dynamic>>> groupedData = [];
             List<Map<String, dynamic>> currentDay = [];
             DateTime currentDayStart = DateTime.parse(hours[0]);
@@ -70,7 +68,7 @@ class _SurfForecastState extends State<SurfForecast> {
                 currentDayStart = timestamp;
               }
             }
-            groupedData.add(currentDay); // Add the last group
+            groupedData.add(currentDay);
 
             return ListView.builder(
               itemCount: groupedData.length,
@@ -83,9 +81,15 @@ class _SurfForecastState extends State<SurfForecast> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _dayOfTheWeek(index),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          // Day label (Today or Day of the Week)
+                          Text(
+                            _dayOfTheWeek(index),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                       SizedBox(
                         height: 110,
@@ -106,19 +110,30 @@ class _SurfForecastState extends State<SurfForecast> {
                                     int direction = dayData[hourIndex]["direction"];
                                     double period = dayData[hourIndex]["period"];
 
+                                    String hourRating = _isGoodSurfHour(height, period);
+
                                     return Container(
                                       width: 80,
                                       padding: const EdgeInsets.symmetric(horizontal: 4),
                                       child: Column(
                                         mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          Text(timeOfDay), // Time of day
-                                          Text("${height.toStringAsFixed(1)} m", style: const TextStyle(fontSize: 12)), // Wave height
+                                          Text(timeOfDay),
+                                          Text("${height.toStringAsFixed(1)} m", style: const TextStyle(fontSize: 12)),
                                           Transform.rotate(
-                                            angle: direction * (pi / 180), // Convert degrees to radians
+                                            angle: direction * (pi / 180),
                                             child: const Icon(Icons.arrow_upward, size: 16),
-                                          ), // Rotated arrow for wave direction
-                                          Text("${period.toStringAsFixed(1)}s", style: const TextStyle(fontSize: 10)), // Wave period
+                                          ),
+                                          Text("${period.toStringAsFixed(1)}s", style: const TextStyle(fontSize: 10)),
+                                          Container(
+                                            margin: const EdgeInsets.only(top: 5),
+                                            height: 10,
+                                            width: 10,
+                                            decoration: BoxDecoration(
+                                              color: _getColorForHourRating(hourRating),
+                                              shape: BoxShape.circle,
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     );
@@ -140,7 +155,22 @@ class _SurfForecastState extends State<SurfForecast> {
     );
   }
 
-  // Get the current day of the week and map it to a readable name
+  String _isGoodSurfHour(double height, double period) {
+    if (height > 1.5 && height < 3.0 && period > 8) {
+      return "Good";
+    } else if (height >= 0.5 && height <= 3.5 && period > 6) {
+      return "Fair";
+    } else {
+      return "Poor";
+    }
+  }
+
+  Color _getColorForHourRating(String rating) {
+    if (rating == "Good") return Colors.green;
+    if (rating == "Fair") return Colors.orange;
+    return Colors.red;
+  }
+
   String _dayOfTheWeek(int index) {
     List<String> daysOfTheWeek = [
       "Monday",
@@ -152,16 +182,15 @@ class _SurfForecastState extends State<SurfForecast> {
       "Sunday"
     ];
 
-    int currentDayIndex = DateTime.now().weekday - 1; // 0 is Sunday, 6 is Saturday
+    int currentDayIndex = DateTime.now().weekday - 1;
     return (index == 0) ? "Today" : daysOfTheWeek[(currentDayIndex + index) % 7];
   }
 
-  // Function to format the timestamp to time of day (e.g., 1 AM, 2 PM, etc.)
   String _formatTimeOfDay(DateTime timestamp) {
     int hour = timestamp.hour;
     String period = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12; // Convert to 12-hour format
-    if (hour == 0) hour = 12; // Handle midnight and noon
+    hour = hour % 12;
+    if (hour == 0) hour = 12;
     return '$hour $period';
   }
 }
