@@ -44,6 +44,10 @@ class _SurfForecastState extends State<SurfForecast> {
             final wavePeriods = data['hourly']['wave_period'];
             final hours = data['hourly']['time'];
 
+            String averageCondition = _calculateAverageCondition(waveHeights, wavePeriods);
+            // Set the provider's isGoodSurfDay to true if it's a good day for surfing
+            Provider.of<LocationProvider>(context, listen: false).setSurfCondition(averageCondition == "Good");
+
             List<List<Map<String, dynamic>>> groupedData = [];
             List<Map<String, dynamic>> currentDay = [];
             DateTime currentDayStart = DateTime.parse(hours[0]);
@@ -153,6 +157,25 @@ class _SurfForecastState extends State<SurfForecast> {
         ),
       ),
     );
+  }
+
+  // Helper method to calculate if it's a good day for surfing
+  String _calculateAverageCondition(List<dynamic> heights, List<dynamic> periods) {
+    int goodCount = 0;
+    int totalCount = heights.length;
+
+    for (int i = 0; i < totalCount; i++) {
+      if (_isGoodSurfHour(heights[i], periods[i]) == "Good") {
+        goodCount++;
+      }
+    }
+
+    // If more than 50% of the forecasted hours are good, consider it a good surf day
+    if (goodCount > totalCount / 2) {
+      return "Good";
+    } else {
+      return "Poor";
+    }
   }
 
   String _isGoodSurfHour(double height, double period) {

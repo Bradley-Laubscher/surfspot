@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "37223953098",
+    "project_id": "surfspot-884c9",
+    "storage_bucket": "surfspot-884c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:37223953098:android:c78d4944cefca173113a33",
+        "android_client_info": {
+          "package_name": "com.example.surfspot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-gbkP7sRaJnvcGf25cSrC0n6YtvmU7v0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

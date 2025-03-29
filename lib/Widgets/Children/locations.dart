@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:surfspot/Config/config.dart';
+import 'package:surfspot/Globals/config.dart';
 import 'package:surfspot/Providers/location_provider.dart';
 
 class LocationList extends StatefulWidget {

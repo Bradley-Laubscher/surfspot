@@ -4,7 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:surfspot/Config/config.dart';
+import 'package:surfspot/Globals/config.dart';
 import 'package:surfspot/Providers/location_provider.dart';
 
 class DestinationMap extends StatefulWidget {
