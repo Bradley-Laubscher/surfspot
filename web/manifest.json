@@ -1,6 +1,6 @@
 {
-    "name": "surfspottest",
-    "short_name": "surfspottest",
+    "name": "surfspot",
+    "short_name": "surfspot",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
