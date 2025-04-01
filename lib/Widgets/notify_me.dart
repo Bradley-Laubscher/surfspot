@@ -1,8 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:surfspot/API/register_number.dart';
-import 'package:surfspot/API/send_notification.dart';
-import 'package:surfspot/Providers/location_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotifyMe extends StatefulWidget {
@@ -13,8 +10,8 @@ class NotifyMe extends StatefulWidget {
 }
 
 class _NotifyMeState extends State<NotifyMe> {
-  TextEditingController _phoneController = TextEditingController();
-  bool _isSubscribed = false;
+  final TextEditingController _userId = TextEditingController();
+  final bool _isSubscribed = false;
   String? _fcmToken;
 
   @override
@@ -32,9 +29,9 @@ class _NotifyMeState extends State<NotifyMe> {
   }
 
   void _subscribeToNotifications() async {
-    String phoneNumber = _phoneController.text.trim();
-    if (phoneNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a phone number')));
+    String userId = _userId.text;
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a userId')));
       return;
     }
 
@@ -43,26 +40,10 @@ class _NotifyMeState extends State<NotifyMe> {
       return;
     }
 
-    // register the phone number
-    registerPhoneNumber(_fcmToken!, phoneNumber);
-
-    // Check surf conditions from LocationProvider
-    bool isGoodDay = Provider.of<LocationProvider>(context, listen: false).isGoodSurfDay;
-
-    if (isGoodDay) {
-      // Send push notification
-      _sendPushNotification(phoneNumber);
-      setState(() {
-        _isSubscribed = true;
-      });
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Surf conditions are not good today')));
-    }
-  }
-
-  void _sendPushNotification(phoneNumber) {
-    // Send the notification via your backend here
-    sendPushNotification(phoneNumber, "SurfSpot", "Waves are good!");
+    // save the token to FireStore
+    await FirebaseFirestore.instance.collection('users').doc(userId).set({
+      'fcmToken': _fcmToken,
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -70,12 +51,12 @@ class _NotifyMeState extends State<NotifyMe> {
     return Column(
       children: [
         TextField(
-          controller: _phoneController,
-          decoration: InputDecoration(labelText: 'Enter Phone Number'),
+          controller: _userId,
+          decoration: const InputDecoration(labelText: 'Enter UserId'),
         ),
         ElevatedButton(
           onPressed: _subscribeToNotifications,
-          child: _isSubscribed ? Text("Subscribed!") : Text("Subscribe to Notifications"),
+          child: _isSubscribed ? const Text("Subscribed!") : const Text("Subscribe to Notifications"),
         ),
       ],
     );
