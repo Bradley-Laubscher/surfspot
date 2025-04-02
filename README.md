@@ -1,16 +1,12 @@
 # surfspot
 
-A new Flutter project.
+A surf forecast application built using Dart and Flutter.
 
-## Getting Started
+The application makes use of the Open-Meteo weather API's to gather and display surf conditions.
 
-This project is a starting point for a Flutter application.
+The application also uses Firebase for storing device FCM Tokens and to notify users when the conditions are good, via push notifications (If they opt into the notifications).
 
-A few resources to get you started if this is your first Flutter project:
+If a user opts into the notifications, they will receive a notification whenever the following conditions are met:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+* Good conditions between the hours of 8am and 6pm.
+* At least 3 consecutive hours of good conditions.
