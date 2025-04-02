@@ -21,6 +21,7 @@ class _SurfForecastState extends State<SurfForecast> {
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: 250, minWidth: 400),
       child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(

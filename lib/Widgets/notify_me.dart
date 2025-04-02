@@ -10,7 +10,6 @@ class NotifyMe extends StatefulWidget {
 }
 
 class _NotifyMeState extends State<NotifyMe> {
-  final TextEditingController _userId = TextEditingController();
   bool _isSubscribed = false;
   String? _fcmToken;
 
@@ -20,119 +19,110 @@ class _NotifyMeState extends State<NotifyMe> {
     _getFCMToken();
   }
 
+  // Get the FCM Token for this device
   void _getFCMToken() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     String? token = await messaging.getToken();
-    setState(() {
-      _fcmToken = token;
-    });
+
+    if (token != null) {
+      setState(() {
+        _fcmToken = token;
+      });
+
+      _checkSubscriptionStatus();
+    }
   }
 
-  // Method to check if the user is already subscribed using their fcmToken
-  Future<bool> _checkIfAlreadySubscribed() async {
-    // Search for the user document by fcmToken
+  void _checkSubscriptionStatus() async {
+    if (_fcmToken == null) return;
+
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
         .collection('users')
         .where('fcmToken', isEqualTo: _fcmToken)
         .get();
 
-    return querySnapshot.docs.isNotEmpty;
-  }
-
-  // Method to check if the userId exists in Firestore
-  Future<bool> _checkUserExists(String userId) async {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-    return userDoc.exists;
+    setState(() {
+      _isSubscribed = querySnapshot.docs.isNotEmpty;
+    });
   }
 
   void _subscribeToNotifications() async {
-    String userId = _userId.text.trim();
-    if (userId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a User ID')));
-      return;
-    }
-
     if (_fcmToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('FCM token not available')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('FCM token not available')));
       return;
     }
 
-    // Check if the user is already subscribed
-    bool alreadySubscribed = await _checkIfAlreadySubscribed();
-    if (alreadySubscribed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ You are already subscribed!'), backgroundColor: Colors.red),
-      );
-      return;
-    }
+    // Check if already subscribed
+    QuerySnapshot existingUser = await FirebaseFirestore.instance
+        .collection('users')
+        .where('fcmToken', isEqualTo: _fcmToken)
+        .get();
 
-    // Check if the userId already exists in the database
-    bool userExists = await _checkUserExists(userId);
-    if (userExists) {
+    if (existingUser.docs.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ This User ID is already subscribed! Please use a different User ID.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('❌ You are already subscribed!'),
+            backgroundColor: Colors.red),
       );
       return;
     }
 
     try {
-      // Save the token and userId to Firestore
-      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+      await FirebaseFirestore.instance.collection('users').add({
         'fcmToken': _fcmToken,
-        'userId': userId,  // Storing the userId to verify during unsubscribe
-      }, SetOptions(merge: true));
+      });
 
       setState(() {
         _isSubscribed = true;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Successfully subscribed to notifications!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('✅ Successfully subscribed to notifications!'),
+            backgroundColor: Colors.green),
       );
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Failed to subscribe: $error'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('❌ Failed to subscribe: $error'),
+            backgroundColor: Colors.red),
       );
     }
   }
 
   void _unsubscribeFromNotifications() async {
-    String userId = _userId.text.trim();
-    if (userId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a User ID')));
-      return;
-    }
-
     if (_fcmToken == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('FCM token not available')));
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('FCM token not available')));
       return;
     }
 
     try {
-      // Retrieve user data from Firestore
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      // Find and delete the document with the matching fcmToken
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('fcmToken', isEqualTo: _fcmToken)
+          .get();
 
-      // Check if the user exists and if the stored fcmToken matches the current fcmToken
-      if (userDoc.exists && userDoc['fcmToken'] == _fcmToken) {
-        // If the fcmToken matches, delete the document
-        await FirebaseFirestore.instance.collection('users').doc(userId).delete();
-
-        setState(() {
-          _isSubscribed = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('✅ Successfully unsubscribed from notifications!'), backgroundColor: Colors.green),
-        );
-      } else {
-        // If the fcmToken doesn't match, show error message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("❌ You're trying to unsubscribe another user! Make sure you typed in your User ID correctly"), backgroundColor: Colors.red),
-        );
+      for (var doc in querySnapshot.docs) {
+        await FirebaseFirestore.instance.collection('users').doc(doc.id).delete();
       }
+
+      setState(() {
+        _isSubscribed = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('✅ Successfully unsubscribed!'),
+            backgroundColor: Colors.green),
+      );
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('❌ Failed to unsubscribe: $error'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('❌ Failed to unsubscribe: $error'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -163,23 +153,12 @@ class _NotifyMeState extends State<NotifyMe> {
                     "This is a free service, and you can unsubscribe anytime.",
                 style: TextStyle(fontSize: 14, color: Colors.black87),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _userId,
-                decoration: InputDecoration(
-                  labelText: 'Enter User ID',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  prefixIcon: const Icon(Icons.person),
-                ),
-              ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _subscribeToNotifications,
+                      onPressed: _isSubscribed ? null : _subscribeToNotifications,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -196,7 +175,7 @@ class _NotifyMeState extends State<NotifyMe> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _unsubscribeFromNotifications,
+                      onPressed: _isSubscribed ? _unsubscribeFromNotifications : null,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
