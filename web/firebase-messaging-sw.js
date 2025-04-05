@@ -8,7 +8,8 @@ firebase.initializeApp({
   projectId: "surfspot-884c9",
   storageBucket: "surfspot-884c9.firebasestorage.app",
   messagingSenderId: "37223953098",
-  appId: "1:37223953098:web:d55cb317ac62d043113a33"
+  appId: "1:37223953098:web:d55cb317ac62d043113a33",
+  vapidKey: 'BFgj1qFNfDDHSMrdh0-yoiAp2QQc8pQQb-g0yakvA2olKfmpQ5vC629WZ1YFFOISsIvqvXuf1IeuqhHFyOqclP0'
 });
 
 const messaging = firebase.messaging();

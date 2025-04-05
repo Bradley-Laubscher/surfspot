@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -22,7 +23,15 @@ class _NotifyMeState extends State<NotifyMe> {
   // Get the FCM Token for this device
   void _getFCMToken() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
-    String? token = await messaging.getToken();
+    String? token;
+
+    if (kIsWeb) {
+      token = await messaging.getToken(
+        vapidKey: 'BFgj1qFNfDDHSMrdh0-yoiAp2QQc8pQQb-g0yakvA2olKfmpQ5vC629WZ1YFFOISsIvqvXuf1IeuqhHFyOqclP0',
+      );
+    } else {
+      token = await messaging.getToken();
+    }
 
     if (token != null) {
       setState(() {
