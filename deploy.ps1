@@ -16,4 +16,4 @@ Set-Location $docsDir
 # Optionally, you can use Git to push these changes to GitHub
 git add .
 git commit -m "Update GitHub Pages"
-git push origin main
+git push origin master
