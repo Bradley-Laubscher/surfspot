@@ -14,13 +14,13 @@ class _FindMySpotState extends State<FindMySpot> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return const Column(
       children: <Widget>[
-        const DestinationMap(),
-        const SizedBox(height: 8),
-        const LocationList(),
-        const SizedBox(height: 8),
-        const SurfForecast()
+        DestinationMap(),
+        SizedBox(height: 8),
+        LocationList(),
+        SizedBox(height: 8),
+        SurfForecast()
       ],
     );
   }

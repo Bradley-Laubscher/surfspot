@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:surfspot/Widgets/detailed_forecast.dart';
+import 'package:surfspot/Widgets/spot_guide.dart';
 import 'package:surfspot/Widgets/find_my_spot.dart';
 import 'package:surfspot/Widgets/notify_me.dart';
 
@@ -16,7 +16,7 @@ class _HomePageState extends State<HomePage> {
   // Placeholder widgets for now
   final List<Widget> _pages = [
     const FindMySpot(),
-    const DetailedForecast(),
+    const SpotGuide(),
     const NotifyMe(),
   ];
 
@@ -49,7 +49,7 @@ class _HomePageState extends State<HomePage> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.waves),
-            label: 'Forecast',
+            label: 'Guide',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
