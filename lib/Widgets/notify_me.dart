@@ -160,7 +160,7 @@ class _NotifyMeState extends State<NotifyMe> {
                 "Get daily surf alerts at 9 AM if good conditions are expected at any point throughout the day. "
                     "Stay informed and never miss a perfect wave!\n"
                     "This is a free service, and you can unsubscribe anytime.",
-                style: TextStyle(fontSize: 14, color: Colors.black87),
+                style: TextStyle(fontSize: 14),
               ),
               const SizedBox(height: 16),
               Row(

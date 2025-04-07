@@ -8,7 +8,12 @@ import 'package:surfspot/Globals/config.dart';
 import 'package:surfspot/Providers/location_provider.dart';
 
 class DestinationMap extends StatefulWidget {
-  const DestinationMap({super.key});
+  const DestinationMap({
+    super.key,
+    required this.isDarkMode
+  });
+
+  final bool isDarkMode;
 
   @override
   State<DestinationMap> createState() => _DestinationMapState();
@@ -110,7 +115,7 @@ class _DestinationMapState extends State<DestinationMap> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: widget.isDarkMode ? Colors.black54 : Colors.white,
                             borderRadius: BorderRadius.circular(8),
                             boxShadow: [
                               BoxShadow(

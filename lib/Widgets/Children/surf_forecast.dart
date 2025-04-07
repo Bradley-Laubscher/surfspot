@@ -5,7 +5,12 @@ import 'dart:math';
 import 'package:surfspot/Providers/location_provider.dart';
 
 class SurfForecast extends StatefulWidget {
-  const SurfForecast({super.key});
+  const SurfForecast({
+    super.key,
+    required this.isDarkMode
+  });
+
+  final bool isDarkMode;
 
   @override
   State<SurfForecast> createState() => _SurfForecastState();
@@ -26,7 +31,7 @@ class _SurfForecastState extends State<SurfForecast> {
         height: MediaQuery.of(context).size.height * 0.3,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            color: Colors.white
+            color: widget.isDarkMode ? Colors.black54 : Colors.white
         ),
         child: FutureBuilder<dynamic>(
           future: fetchSurfForecast(latitude, longitude),
