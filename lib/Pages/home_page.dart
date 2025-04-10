@@ -67,44 +67,74 @@ class _HomePageState extends State<HomePage> {
       theme: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
       home: Scaffold(
         appBar: AppBar(
-          title: const Text('Surf Spot'),
+          elevation: 0,
+          backgroundColor: _isDarkMode ? Colors.black : Colors.blue[900],
           centerTitle: true,
-          actions: [
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.settings),
-              onSelected: _onSettingsSelected,
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'dark_mode',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.dark_mode),
-                      const SizedBox(width: 8),
-                      Text(_isDarkMode ? 'Light Mode' : 'Dark Mode'),
-                    ],
+          title: RichText(
+            text: const TextSpan(
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    blurRadius: 4,
+                    color: Colors.black38,
+                    offset: Offset(2, 2),
                   ),
-                ),
-                const PopupMenuItem(
-                  value: 'about',
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline),
-                      SizedBox(width: 8),
-                      Text('About'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'contact',
-                  child: Row(
-                    children: [
-                      Icon(Icons.email_outlined),
-                      SizedBox(width: 8),
-                      Text('Contact'),
-                    ],
+                ],
+              ),
+              children: [
+                TextSpan(text: 'SURF'),
+                TextSpan(
+                  text: 'SPOT',
+                  style: TextStyle(
+                    color: Colors.lightBlueAccent,
                   ),
                 ),
               ],
+            ),
+          ),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.settings, color: Colors.white),
+                onSelected: _onSettingsSelected,
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'dark_mode',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.dark_mode),
+                        const SizedBox(width: 8),
+                        Text(_isDarkMode ? 'Light Mode' : 'Dark Mode'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'about',
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline),
+                        SizedBox(width: 8),
+                        Text('About'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'contact',
+                    child: Row(
+                      children: [
+                        Icon(Icons.email_outlined),
+                        SizedBox(width: 8),
+                        Text('Contact'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

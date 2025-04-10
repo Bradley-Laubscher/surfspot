@@ -45,7 +45,10 @@ class _SpotGuideState extends State<SpotGuide> {
                 title: Text(
                   spot['name'],
                   style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    overflow: TextOverflow.ellipsis
+                  ),
                 ),
                 children: [
                   Padding(
