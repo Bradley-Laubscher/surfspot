@@ -54,4 +54,15 @@ List<Map<String, dynamic>> locations = [
     "tide": "Mid Tide",
     "hazards": ["Shorebreak"],
   },
+  {
+    "name": "Llandudno",
+    "longitude": "18.342780",
+    "latitude": "-34.010280",
+    "image": "assets/llandudno.jpg",
+    "difficultyRating": 3,
+    "bestSwell": "South-West",
+    "bestWind": "East",
+    "tide": "Low to Mid Tide",
+    "hazards": ["Rip Currents", "Powerful Shorebreak", "No Lifeguards"],
+  },
 ];

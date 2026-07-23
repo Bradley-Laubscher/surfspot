@@ -1,225 +1,228 @@
 import 'package:flutter/material.dart';
-import 'package:surfspot/API/fetch_surf_forecast.dart';
 import 'package:provider/provider.dart';
-import 'dart:math';
 import 'package:surfspot/Providers/location_provider.dart';
+import 'package:surfspot/Providers/surf_conditions_provider.dart';
+import 'package:surfspot/Theme/app_theme.dart';
+import 'package:surfspot/Utils/formatting.dart';
+import 'package:surfspot/Utils/horizontal_scroll.dart';
+import 'package:surfspot/Utils/surf_scoring.dart';
 
-class SurfForecast extends StatefulWidget {
-  const SurfForecast({
-    super.key,
-    required this.isDarkMode
-  });
+/// Displays the cached forecast for the currently selected spot. Data comes
+/// from [SurfConditionsProvider], which fetches every spot once up front -
+/// switching spots here is instant, with no per-tap network round trip.
+class SurfForecast extends StatelessWidget {
+  const SurfForecast({super.key});
 
-  final bool isDarkMode;
-
-  @override
-  State<SurfForecast> createState() => _SurfForecastState();
-}
-
-class _SurfForecastState extends State<SurfForecast> {
   @override
   Widget build(BuildContext context) {
-    final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
-    final latitude = double.parse(selectedLocation["latitude"]);
-    final longitude = double.parse(selectedLocation["longitude"]);
+    final selectedName = context.watch<LocationProvider>().selectedLocation["name"];
+    final conditions = context.watch<SurfConditionsProvider>();
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: 250, minWidth: 400),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        width: MediaQuery.of(context).size.width * 0.8,
-        height: MediaQuery.of(context).size.height * 0.3,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: widget.isDarkMode ? Colors.black54 : Colors.white
-        ),
-        child: FutureBuilder<dynamic>(
-          future: fetchSurfForecast(latitude, longitude),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text("Error: ${snapshot.error}"));
-            } else if (!snapshot.hasData) {
-              return const Center(child: Text("No data available"));
-            }
-
-            final data = snapshot.data!;
-            final waveHeights = data['hourly']['wave_height'];
-            final windDirections = data['hourly']['wind_wave_direction'];
-            final wavePeriods = data['hourly']['wave_period'];
-            final hours = data['hourly']['time'];
-
-            String averageCondition = _calculateAverageCondition(waveHeights, wavePeriods);
-            // Set the provider's isGoodSurfDay to true if it's a good day for surfing
-            Provider.of<LocationProvider>(context, listen: false).setSurfCondition(averageCondition == "Good");
-
-            List<List<Map<String, dynamic>>> groupedData = [];
-            List<Map<String, dynamic>> currentDay = [];
-            DateTime currentDayStart = DateTime.parse(hours[0]);
-
-            for (int i = 0; i < waveHeights.length; i++) {
-              DateTime timestamp = DateTime.parse(hours[i]);
-              if (timestamp.day == currentDayStart.day) {
-                currentDay.add({
-                  "height": waveHeights[i],
-                  "direction": windDirections[i],
-                  "period": wavePeriods[i],
-                  "time": timestamp
-                });
-              } else {
-                groupedData.add(currentDay);
-                currentDay = [{
-                  "height": waveHeights[i],
-                  "direction": windDirections[i],
-                  "period": wavePeriods[i],
-                  "time": timestamp
-                }];
-                currentDayStart = timestamp;
-              }
-            }
-            groupedData.add(currentDay);
-
-            return ListView.builder(
-              itemCount: groupedData.length,
-              itemBuilder: (context, index) {
-                List<Map<String, dynamic>> dayData = groupedData[index];
-                ScrollController scrollController = ScrollController();
-
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          // Day label (Today or Day of the Week)
-                          Text(
-                            _dayOfTheWeek(index),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      SizedBox(
-                        height: 110,
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: Scrollbar(
-                                controller: scrollController,
-                                thumbVisibility: true,
-                                child: ListView.builder(
-                                  controller: scrollController,
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: dayData.length,
-                                  itemBuilder: (context, hourIndex) {
-                                    DateTime timestamp = dayData[hourIndex]["time"];
-                                    String timeOfDay = _formatTimeOfDay(timestamp);
-                                    double height = dayData[hourIndex]["height"];
-                                    int direction = dayData[hourIndex]["direction"];
-                                    double period = dayData[hourIndex]["period"];
-
-                                    String hourRating = _isGoodSurfHour(height, period);
-
-                                    return Container(
-                                      width: 80,
-                                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Text(timeOfDay),
-                                          Text("${height.toStringAsFixed(1)} m", style: const TextStyle(fontSize: 12)),
-                                          Transform.rotate(
-                                            angle: direction * (pi / 180),
-                                            child: const Icon(Icons.arrow_upward, size: 16),
-                                          ),
-                                          Text("${period.toStringAsFixed(1)}s", style: const TextStyle(fontSize: 10)),
-                                          Container(
-                                            margin: const EdgeInsets.only(top: 5),
-                                            height: 10,
-                                            width: 10,
-                                            decoration: BoxDecoration(
-                                              color: _getColorForHourRating(hourRating),
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 320),
+          child: _buildBody(context, conditions, selectedName),
         ),
       ),
     );
   }
 
-  // Helper method to calculate if it's a good day for surfing
-  String _calculateAverageCondition(List<dynamic> heights, List<dynamic> periods) {
-    int goodCount = 0;
-    int totalCount = heights.length;
-
-    for (int i = 0; i < totalCount; i++) {
-      if (_isGoodSurfHour(heights[i], periods[i]) == "Good") {
-        goodCount++;
-      }
+  Widget _buildBody(BuildContext context, SurfConditionsProvider conditions, String selectedName) {
+    if (conditions.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (conditions.error != null) {
+      return _ErrorState(message: conditions.error!, onRetry: conditions.loadAll);
     }
 
-    // If more than 50% of the forecasted hours are good, consider it a good surf day
-    if (goodCount > totalCount / 2) {
-      return "Good";
-    } else {
-      return "Poor";
+    final forecast = conditions.forecastFor(selectedName);
+    if (forecast == null || forecast.hours.isEmpty) {
+      return const Center(child: Text("No forecast available for this spot."));
     }
+
+    final days = forecast.byDay;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _SummaryHeader(name: forecast.name, window: forecast.todaysBestWindow),
+        const SizedBox(height: 16),
+        for (int i = 0; i < days.length; i++) ...[
+          if (i > 0) const Divider(height: 28),
+          _DaySection(hours: days[i]),
+        ],
+      ],
+    );
+  }
+}
+
+class _SummaryHeader extends StatelessWidget {
+  final String name;
+  final SurfWindow? window;
+
+  const _SummaryHeader({required this.name, required this.window});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final window = this.window;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(name, style: textTheme.titleLarge),
+              const SizedBox(height: 2),
+              Text(
+                window != null
+                    ? "Best today: ${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}"
+                    : "No standout window today",
+                style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        if (window != null) _RatingBadge(rating: window.bestHour.rating),
+      ],
+    );
+  }
+}
+
+class _RatingBadge extends StatelessWidget {
+  final SurfRating rating;
+
+  const _RatingBadge({required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = surfRatingColor(rating);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(surfRatingIcon(rating), size: 16, color: color),
+          const SizedBox(width: 4),
+          Text(rating.label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DaySection extends StatefulWidget {
+  final List<ScoredHour> hours;
+
+  const _DaySection({required this.hours});
+
+  @override
+  State<_DaySection> createState() => _DaySectionState();
+}
+
+class _DaySectionState extends State<_DaySection> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
-  String _isGoodSurfHour(double height, double period) {
-    if (height > 1.5 && height < 3.0 && period > 8) {
-      return "Good";
-    } else if (height >= 0.5 && height <= 3.5 && period > 6) {
-      return "Fair";
-    } else {
-      return "Poor";
-    }
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(dayLabel(widget.hours.first.reading.time), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 128,
+          child: HorizontalWheelScroll(
+            controller: _scrollController,
+            child: ListView.separated(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              itemCount: widget.hours.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) => _HourTile(hour: widget.hours[index]),
+            ),
+          ),
+        ),
+      ],
+    );
   }
+}
 
-  Color _getColorForHourRating(String rating) {
-    if (rating == "Good") return Colors.green;
-    if (rating == "Fair") return Colors.orange;
-    return Colors.red;
+class _HourTile extends StatelessWidget {
+  final ScoredHour hour;
+
+  const _HourTile({required this.hour});
+
+  @override
+  Widget build(BuildContext context) {
+    final reading = hour.reading;
+    final color = surfRatingColor(hour.rating);
+    final windSpeed = reading.windSpeed;
+    final windDirection = reading.windDirection;
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: 84,
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border(top: BorderSide(color: color, width: 3)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(formatHour(reading.time), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          Transform.rotate(
+            angle: (reading.swellDirection * 3.1415926535) / 180,
+            child: Icon(Icons.arrow_upward_rounded, size: 18, color: colorScheme.primary),
+          ),
+          Text("${reading.waveHeight.toStringAsFixed(1)}m", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+          Text("${reading.wavePeriod.toStringAsFixed(0)}s", style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant)),
+          if (windSpeed != null && windDirection != null) ...[
+            Transform.rotate(
+              angle: (windDirection * 3.1415926535) / 180,
+              child: Icon(Icons.air_rounded, size: 13, color: colorScheme.onSurfaceVariant),
+            ),
+            Text("${windSpeed.toStringAsFixed(0)}km/h", style: TextStyle(fontSize: 9, color: colorScheme.onSurfaceVariant)),
+          ],
+        ],
+      ),
+    );
   }
+}
 
-  String _dayOfTheWeek(int index) {
-    List<String> daysOfTheWeek = [
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-      "Sunday"
-    ];
+class _ErrorState extends StatelessWidget {
+  final String message;
+  final Future<void> Function() onRetry;
 
-    int currentDayIndex = DateTime.now().weekday - 1;
-    return (index == 0) ? "Today" : daysOfTheWeek[(currentDayIndex + index) % 7];
-  }
+  const _ErrorState({required this.message, required this.onRetry});
 
-  String _formatTimeOfDay(DateTime timestamp) {
-    int hour = timestamp.hour;
-    String period = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12;
-    if (hour == 0) hour = 12;
-    return '$hour $period';
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.cloud_off_rounded, size: 40, color: Theme.of(context).colorScheme.error),
+          const SizedBox(height: 8),
+          Text(message, textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          ElevatedButton(onPressed: onRetry, child: const Text("Retry")),
+        ],
+      ),
+    );
   }
 }

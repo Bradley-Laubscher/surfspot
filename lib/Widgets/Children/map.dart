@@ -6,14 +6,10 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:surfspot/Globals/config.dart';
 import 'package:surfspot/Providers/location_provider.dart';
+import 'package:surfspot/Theme/app_theme.dart';
 
 class DestinationMap extends StatefulWidget {
-  const DestinationMap({
-    super.key,
-    required this.isDarkMode
-  });
-
-  final bool isDarkMode;
+  const DestinationMap({super.key});
 
   @override
   State<DestinationMap> createState() => _DestinationMapState();
@@ -55,6 +51,8 @@ class _DestinationMapState extends State<DestinationMap> {
   @override
   Widget build(BuildContext context) {
     final selectedLocation = Provider.of<LocationProvider>(context).selectedLocation;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     // Smoothly animate to the selected location when it changes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,82 +66,87 @@ class _DestinationMapState extends State<DestinationMap> {
       );
     });
 
-    return ConstrainedBox(
-      constraints: const BoxConstraints(
-        minHeight: 250,
-        minWidth: 400,
-      ),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        margin: const EdgeInsets.only(top: 20),
-        width: MediaQuery.of(context).size.width * 0.6,
-        height: MediaQuery.of(context).size.height * 0.3,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: Colors.black,
-            width: 1,
-            style: BorderStyle.solid,
-          ),
-        ),
-        child: FlutterMap(
-          mapController: _mapController,
-          options: MapOptions(
-            initialCenter: LatLng(
-              double.parse(selectedLocation["latitude"]),
-              double.parse(selectedLocation["longitude"]),
+        decoration: BoxDecoration(border: Border.all(color: colorScheme.outlineVariant, width: 1)),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: FlutterMap(
+            mapController: _mapController,
+            options: MapOptions(
+              initialCenter: LatLng(
+                double.parse(selectedLocation["latitude"]),
+                double.parse(selectedLocation["longitude"]),
+              ),
+              initialZoom: 9.0,
             ),
-            initialZoom: 9.0,
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-              tileProvider: CancellableNetworkTileProvider(),
-            ),
-            MarkerLayer(
-              markers: locations.map((spot) {
-                bool isSelected = spot["name"] == selectedLocation["name"];
+            children: [
+              TileLayer(
+                urlTemplate: isDarkMode
+                    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                    : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                subdomains: isDarkMode ? const ['a', 'b', 'c', 'd'] : const [],
+                tileProvider: CancellableNetworkTileProvider(),
+              ),
+              MarkerLayer(
+                markers: locations.map((spot) {
+                  bool isSelected = spot["name"] == selectedLocation["name"];
 
-                return Marker(
-                  point: LatLng(
-                    double.parse(spot["latitude"]),
-                    double.parse(spot["longitude"]),
-                  ),
-                  width: 100,
-                  height: 50,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: widget.isDarkMode ? Colors.black54 : Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                  return Marker(
+                    point: LatLng(
+                      double.parse(spot["latitude"]),
+                      double.parse(spot["longitude"]),
+                    ),
+                    width: 132,
+                    height: 78,
+                    alignment: Alignment.bottomCenter,
+                    child: GestureDetector(
+                      onTap: () {
+                        final index = locations.indexOf(spot);
+                        Provider.of<LocationProvider>(context, listen: false).setLocation(index);
+                      },
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isSelected ? AppColors.teal : (isDarkMode ? Colors.black87 : Colors.white),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              spot["name"],
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected ? Colors.white : (isDarkMode ? Colors.white : Colors.black87),
                               ),
-                            ],
+                            ),
                           ),
-                          child: Text(
-                            spot["name"],
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          const SizedBox(height: 2),
+                          Icon(
+                            Icons.location_on,
+                            color: isSelected ? AppColors.teal : AppColors.coral,
+                            size: isSelected ? 32 : 24,
                           ),
-                        ),
+                        ],
                       ),
-                      Expanded(
-                        child: Icon(
-                          Icons.location_on,
-                          color: isSelected ? Colors.blue : Colors.red,
-                          size: isSelected ? 40 : 30,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
         ),
       ),
     );

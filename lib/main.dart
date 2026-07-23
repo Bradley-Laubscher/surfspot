@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:surfspot/Pages/home_page.dart';
 import 'package:surfspot/Providers/location_provider.dart';
+import 'package:surfspot/Providers/surf_conditions_provider.dart';
+import 'package:surfspot/Providers/theme_provider.dart';
+import 'package:surfspot/Theme/app_theme.dart';
+import 'package:surfspot/Utils/horizontal_scroll.dart';
 import 'package:surfspot/firebase_options.dart';
 
 void main() async {
@@ -15,6 +19,8 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => LocationProvider()),
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => SurfConditionsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -24,15 +30,17 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeProvider>().themeMode;
+
     return MaterialApp(
       title: 'Surf Spot',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      debugShowCheckedModeBanner: false,
+      scrollBehavior: AppScrollBehavior(),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       home: const HomePage(),
     );
   }
