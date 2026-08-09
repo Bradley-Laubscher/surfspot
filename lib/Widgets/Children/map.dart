@@ -87,6 +87,7 @@ class _DestinationMapState extends State<DestinationMap> {
                     ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                     : "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 subdomains: isDarkMode ? const ['a', 'b', 'c', 'd'] : const [],
+                userAgentPackageName: 'com.example.surfspot',
                 tileProvider: CancellableNetworkTileProvider(),
               ),
               MarkerLayer(
