@@ -44,12 +44,12 @@ class _LocationListState extends State<LocationList> {
             final spot = locations[index];
             final isSelected = spot["name"] == selectedName;
             final forecast = conditions.forecastFor(spot["name"]);
-            final todayRating = forecast?.todaysBestWindow?.bestHour.rating;
+            final dayRating = forecast?.bestWindowOn(conditions.selectedDay)?.bestHour.rating;
 
             return _LocationCard(
               spot: spot,
               isSelected: isSelected,
-              rating: todayRating,
+              rating: dayRating,
               onTap: () => context.read<LocationProvider>().setLocation(index),
             );
           },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:surfspot/API/fetch_surf_forecast.dart';
 import 'package:surfspot/Globals/config.dart';
+import 'package:surfspot/Utils/formatting.dart';
 import 'package:surfspot/Utils/surf_scoring.dart';
 
 /// A spot's forecast, scored against its own best swell/wind/difficulty.
@@ -11,24 +12,37 @@ class SpotForecast {
   SpotForecast({required this.spot, required this.hours});
 
   String get name => spot["name"] as String;
+  int get difficultyRating => spot["difficultyRating"] as int;
 
   List<List<ScoredHour>> get byDay => groupByDay(hours);
 
-  /// The best 3-hour surf window happening today, if any daylight hours
-  /// remain in today's forecast.
-  SurfWindow? get todaysBestWindow {
-    final now = DateTime.now();
-    final today = hours.where((h) => h.reading.time.day == now.day && h.reading.time.month == now.month).toList();
-    if (today.isEmpty) return null;
-    return bestWindowInDay(today);
+  /// The best 3-hour daylight surf window on [day]. Hours that have already
+  /// passed are skipped, so asking about today never recommends a window
+  /// that ended this morning.
+  SurfWindow? bestWindowOn(DateTime day) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+    final dayHours = hours.where((h) => isSameDay(h.reading.time, day) && h.reading.time.isAfter(cutoff)).toList();
+    if (dayHours.isEmpty) return null;
+    return bestWindowInDay(dayHours);
   }
 }
 
+/// A spot paired with its best surf window on a particular day.
+class SpotRecommendation {
+  final SpotForecast forecast;
+  final SurfWindow window;
+
+  const SpotRecommendation({required this.forecast, required this.window});
+}
+
 /// Fetches forecasts for every configured spot once, scores them, and
-/// exposes the results plus a "Spot of the Day" ranking so the whole app
-/// shares a single set of network calls instead of every widget re-fetching.
+/// ranks spots for whichever day the user is planning to surf, so the whole
+/// app shares a single set of network calls instead of every widget
+/// re-fetching.
 class SurfConditionsProvider with ChangeNotifier {
   final Map<String, SpotForecast> _forecasts = {};
+  List<DateTime> _plannableDays = [];
+  DateTime? _selectedDay;
   bool _isLoading = true;
   String? _error;
 
@@ -42,19 +56,45 @@ class SurfConditionsProvider with ChangeNotifier {
 
   SpotForecast? forecastFor(String spotName) => _forecasts[spotName];
 
-  /// The spot with the best surf window happening today, ranked by total
-  /// points across its best 3 daylight hours.
-  SpotForecast? get spotOfTheDay {
-    SpotForecast? best;
-    int bestScore = -1;
-    for (final forecast in _forecasts.values) {
-      final window = forecast.todaysBestWindow;
-      if (window != null && window.totalPoints > bestScore) {
-        bestScore = window.totalPoints;
-        best = forecast;
-      }
-    }
-    return best;
+  /// Days in the forecast where at least one spot still has a daylight
+  /// surf window - i.e. the days the user can plan a session for.
+  List<DateTime> get plannableDays => _plannableDays;
+
+  /// The day the user is planning to surf. Defaults to the first plannable
+  /// day (normally today, or tomorrow once today's daylight has run out).
+  DateTime get selectedDay {
+    final selected = _selectedDay;
+    if (selected != null && _plannableDays.any((d) => isSameDay(d, selected))) return selected;
+    return _plannableDays.isNotEmpty ? _plannableDays.first : dateOnly(DateTime.now());
+  }
+
+  void selectDay(DateTime day) {
+    _selectedDay = dateOnly(day);
+    notifyListeners();
+  }
+
+  /// Every spot with a surf window on [day], best first. Ranked by total
+  /// points across each spot's best 3 daylight hours, then by its single
+  /// best hour, then favouring the more accessible (lower difficulty) spot.
+  List<SpotRecommendation> rankingFor(DateTime day) {
+    final ranking = <SpotRecommendation>[
+      for (final forecast in _forecasts.values)
+        if (forecast.bestWindowOn(day) case final window?) SpotRecommendation(forecast: forecast, window: window),
+    ];
+    ranking.sort((a, b) {
+      final byTotal = b.window.totalPoints.compareTo(a.window.totalPoints);
+      if (byTotal != 0) return byTotal;
+      final byPeak = b.window.bestHour.points.compareTo(a.window.bestHour.points);
+      if (byPeak != 0) return byPeak;
+      return a.forecast.difficultyRating.compareTo(b.forecast.difficultyRating);
+    });
+    return ranking;
+  }
+
+  /// The best spot to surf on [day], if any spot has a window that day.
+  SpotRecommendation? recommendationFor(DateTime day) {
+    final ranking = rankingFor(day);
+    return ranking.isEmpty ? null : ranking.first;
   }
 
   Future<void> loadAll() async {
@@ -83,11 +123,18 @@ class SurfConditionsProvider with ChangeNotifier {
       for (final forecast in results) {
         _forecasts[forecast.name] = forecast;
       }
+      _plannableDays = _computePlannableDays();
     } catch (e) {
       _error = "Couldn't load surf conditions: $e";
     }
 
     _isLoading = false;
     notifyListeners();
+  }
+
+  List<DateTime> _computePlannableDays() {
+    final days = {for (final forecast in _forecasts.values) ...forecast.hours.map((h) => dateOnly(h.reading.time))}.toList()
+      ..sort();
+    return days.where((day) => _forecasts.values.any((f) => f.bestWindowOn(day) != null)).toList();
   }
 }

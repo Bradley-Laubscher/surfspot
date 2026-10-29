@@ -48,7 +48,7 @@ class SurfForecast extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SummaryHeader(name: forecast.name, window: forecast.todaysBestWindow),
+        _SummaryHeader(name: forecast.name, day: conditions.selectedDay, window: forecast.bestWindowOn(conditions.selectedDay)),
         const SizedBox(height: 16),
         for (int i = 0; i < days.length; i++) ...[
           if (i > 0) const Divider(height: 28),
@@ -61,14 +61,16 @@ class SurfForecast extends StatelessWidget {
 
 class _SummaryHeader extends StatelessWidget {
   final String name;
+  final DateTime day;
   final SurfWindow? window;
 
-  const _SummaryHeader({required this.name, required this.window});
+  const _SummaryHeader({required this.name, required this.day, required this.window});
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final window = this.window;
+    final when = isToday(day) ? "today" : "on ${dayLabel(day)}";
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,8 +83,8 @@ class _SummaryHeader extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 window != null
-                    ? "Best today: ${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}"
-                    : "No standout window today",
+                    ? "Best $when: ${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}"
+                    : "No standout window $when",
                 style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],

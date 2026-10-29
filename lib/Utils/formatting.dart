@@ -9,9 +9,17 @@ String formatHour(DateTime time) {
 const _weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 String dayLabel(DateTime time) {
-  final now = DateTime.now();
-  if (time.year == now.year && time.month == now.month && time.day == now.day) {
+  if (isToday(time)) {
     return 'Today';
   }
   return _weekdays[time.weekday - 1];
 }
+
+String shortWeekday(DateTime time) => _weekdays[time.weekday - 1].substring(0, 3);
+
+/// Midnight at the start of [time]'s calendar day, for comparing/keying days.
+DateTime dateOnly(DateTime time) => DateTime(time.year, time.month, time.day);
+
+bool isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+
+bool isToday(DateTime time) => isSameDay(time, DateTime.now());

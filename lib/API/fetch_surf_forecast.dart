@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+/// How many days ahead the planner can recommend a spot for.
+const int forecastDays = 7;
+
 /// Fetches marine swell data and meteorological wind data and merges them
 /// into a single hourly series keyed by timestamp.
 ///
@@ -14,10 +17,10 @@ import 'package:http/http.dart' as http;
 Future<Map<String, dynamic>> fetchSurfForecast(double latitude, double longitude) async {
   final marineUrl = Uri.parse(
       'https://marine-api.open-meteo.com/v1/marine?latitude=$latitude&longitude=$longitude'
-      '&hourly=swell_wave_height,swell_wave_period,swell_wave_direction&timezone=auto');
+      '&hourly=swell_wave_height,swell_wave_period,swell_wave_direction&timezone=auto&forecast_days=$forecastDays');
   final windUrl = Uri.parse(
       'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude'
-      '&hourly=wind_speed_10m,wind_direction_10m&timezone=auto');
+      '&hourly=wind_speed_10m,wind_direction_10m&timezone=auto&forecast_days=$forecastDays');
 
   try {
     final responses = await Future.wait([http.get(marineUrl), http.get(windUrl)]);

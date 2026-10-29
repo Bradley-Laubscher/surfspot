@@ -3,7 +3,7 @@ import 'package:surfspot/Theme/app_theme.dart';
 import 'package:surfspot/Widgets/Children/locations.dart';
 import 'package:surfspot/Widgets/Children/map.dart';
 import 'package:surfspot/Widgets/Children/surf_forecast.dart';
-import 'package:surfspot/Widgets/spot_of_the_day.dart';
+import 'package:surfspot/Widgets/spot_planner.dart';
 
 class FindMySpot extends StatelessWidget {
   const FindMySpot({super.key});
@@ -17,7 +17,7 @@ class FindMySpot extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SpotOfTheDay(),
+          const SpotPlanner(),
           const SizedBox(height: 20),
           if (isWide)
             const Row(

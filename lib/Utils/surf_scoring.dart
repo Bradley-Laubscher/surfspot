@@ -34,13 +34,24 @@ extension SurfRatingLabel on SurfRating {
   }
 }
 
+/// One contributing reason behind an hour's score, e.g. "Offshore North-East
+/// wind (15 km/h)" worth +2. Recorded during scoring so recommendations can
+/// explain themselves without re-deriving the thresholds.
+class ScoreFactor {
+  final String label;
+  final int points;
+
+  const ScoreFactor(this.label, this.points);
+}
+
 /// An hour of forecast data plus its computed surf-quality score.
 class ScoredHour {
   final HourlyReading reading;
   final int points;
   final SurfRating rating;
+  final List<ScoreFactor> factors;
 
-  const ScoredHour({required this.reading, required this.points, required this.rating});
+  const ScoredHour({required this.reading, required this.points, required this.rating, this.factors = const []});
 }
 
 double _asDouble(dynamic value) => (value as num).toDouble();
@@ -80,32 +91,47 @@ ScoredHour scoreHour(
   required int difficultyRating,
 }) {
   int points = 0;
+  final factors = <ScoreFactor>[];
+  void add(String label, int value) {
+    points += value;
+    factors.add(ScoreFactor(label, value));
+  }
 
   // Ideal wave height band scales with the spot's difficulty rating -
   // beginner-friendly beach breaks want smaller, softer swell than
   // advanced reef/point breaks.
   final idealMin = 0.4 + (difficultyRating - 1) * 0.4;
   final idealMax = 1.2 + (difficultyRating - 1) * 0.65;
+  final height = "${reading.waveHeight.toStringAsFixed(1)}m swell";
+  final sizeWord = reading.waveHeight < idealMin ? "small" : "big";
   if (reading.waveHeight >= idealMin && reading.waveHeight <= idealMax) {
-    points += 2;
+    add("$height - ideal size for this spot", 2);
   } else if (reading.waveHeight >= idealMin * 0.5 && reading.waveHeight <= idealMax * 1.5) {
-    points += 1;
+    add("$height - a bit $sizeWord for this spot", 1);
+  } else {
+    add("$height - too $sizeWord for this spot", 0);
   }
 
   // Longer period swells are more organised groundswell energy rather
   // than short-interval wind swell.
+  final period = "${reading.wavePeriod.toStringAsFixed(0)}s";
   if (reading.wavePeriod > 10) {
-    points += 2;
+    add("Long-period groundswell ($period)", 2);
   } else if (reading.wavePeriod > 7) {
-    points += 1;
+    add("Moderate swell period ($period)", 1);
+  } else {
+    add("Short-period wind swell ($period)", 0);
   }
 
   // Swell arriving from well outside the spot's ideal window will refract,
   // close out, or simply not reach the break cleanly.
+  final swellFrom = nearestCardinal(reading.swellDirection);
   if (directionMatches(reading.swellDirection, bestSwell, tolerance: 35)) {
-    points += 2;
+    add("$swellFrom swell - this spot's ideal direction", 2);
   } else if (!directionMatches(reading.swellDirection, bestSwell, tolerance: 70)) {
-    points -= 2;
+    add("$swellFrom swell - wrong direction for this spot", -2);
+  } else {
+    add("$swellFrom swell - slightly off-angle", 0);
   }
 
   // Wind is the biggest factor in whether a swell is clean or blown out.
@@ -113,17 +139,18 @@ ScoredHour scoreHour(
   final windDirection = reading.windDirection;
   if (windSpeed != null && windDirection != null) {
     final isOffshore = directionMatches(windDirection, bestWind, tolerance: 45);
+    final wind = "${nearestCardinal(windDirection)} wind (${windSpeed.toStringAsFixed(0)} km/h)";
     if (windSpeed < 10) {
-      points += 1; // light wind rarely spoils a session regardless of direction
+      add("Light $wind", 1); // light wind rarely spoils a session regardless of direction
     } else if (isOffshore) {
-      points += windSpeed < 25 ? 2 : 1;
+      add(windSpeed < 25 ? "Offshore $wind" : "Strong offshore $wind", windSpeed < 25 ? 2 : 1);
     } else {
-      points -= windSpeed > 20 ? 2 : 1;
+      add("Onshore/cross-shore $wind", windSpeed > 20 ? -2 : -1);
     }
   }
 
   final rating = points >= 6 ? SurfRating.good : (points >= 3 ? SurfRating.fair : SurfRating.poor);
-  return ScoredHour(reading: reading, points: points, rating: rating);
+  return ScoredHour(reading: reading, points: points, rating: rating, factors: factors);
 }
 
 /// Groups a chronological list of scored hours into one list per calendar day.
