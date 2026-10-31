@@ -43,16 +43,25 @@ class SurfForecast extends StatelessWidget {
     }
 
     final days = forecast.byDay;
+    final hour = conditions.selectedHour;
+    final selectedTime = hour != null
+        ? DateTime(conditions.selectedDay.year, conditions.selectedDay.month, conditions.selectedDay.day, hour)
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SummaryHeader(name: forecast.name, day: conditions.selectedDay, window: forecast.bestWindowOn(conditions.selectedDay)),
+        _SummaryHeader(
+          name: forecast.name,
+          day: conditions.selectedDay,
+          window: conditions.selectedWindowFor(forecast),
+          isSpecificHour: hour != null,
+        ),
         const SizedBox(height: 16),
         for (int i = 0; i < days.length; i++) ...[
           if (i > 0) const Divider(height: 28),
-          _DaySection(hours: days[i]),
+          _DaySection(hours: days[i], highlightedTime: selectedTime),
         ],
       ],
     );
@@ -63,8 +72,9 @@ class _SummaryHeader extends StatelessWidget {
   final String name;
   final DateTime day;
   final SurfWindow? window;
+  final bool isSpecificHour;
 
-  const _SummaryHeader({required this.name, required this.day, required this.window});
+  const _SummaryHeader({required this.name, required this.day, required this.window, required this.isSpecificHour});
 
   @override
   Widget build(BuildContext context) {
@@ -82,9 +92,11 @@ class _SummaryHeader extends StatelessWidget {
               Text(name, style: textTheme.titleLarge),
               const SizedBox(height: 2),
               Text(
-                window != null
-                    ? "Best $when: ${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}"
-                    : "No standout window $when",
+                window == null
+                    ? "No standout window $when"
+                    : isSpecificHour
+                        ? "${window.bestHour.rating.label} $when at ${window.timeLabel}"
+                        : "Best $when: ${window.timeLabel}",
                 style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
@@ -122,14 +134,54 @@ class _RatingBadge extends StatelessWidget {
 class _DaySection extends StatefulWidget {
   final List<ScoredHour> hours;
 
-  const _DaySection({required this.hours});
+  /// The hour the user picked in the planner, if it falls on this day - it's
+  /// outlined and scrolled into view.
+  final DateTime? highlightedTime;
+
+  const _DaySection({required this.hours, required this.highlightedTime});
 
   @override
   State<_DaySection> createState() => _DaySectionState();
 }
 
 class _DaySectionState extends State<_DaySection> {
+  static const double _tileExtent = _HourTile.width + 8;
+
   final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollToHighlight();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DaySection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // byDay builds fresh lists every rebuild, so compare the (stable) first
+    // hour to detect a different spot's forecast rather than list identity.
+    if (oldWidget.highlightedTime != widget.highlightedTime || oldWidget.hours.first != widget.hours.first) {
+      _scrollToHighlight();
+    }
+  }
+
+  int get _highlightIndex {
+    final time = widget.highlightedTime;
+    if (time == null) return -1;
+    return widget.hours.indexWhere((h) => h.reading.time == time);
+  }
+
+  void _scrollToHighlight() {
+    final index = _highlightIndex;
+    if (index == -1) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      final position = _scrollController.position;
+      // Leave the previous hour or so visible for context.
+      final offset = (index * _tileExtent - _tileExtent).clamp(0.0, position.maxScrollExtent);
+      _scrollController.animateTo(offset, duration: const Duration(milliseconds: 400), curve: Curves.easeOutCubic);
+    });
+  }
 
   @override
   void dispose() {
@@ -153,7 +205,7 @@ class _DaySectionState extends State<_DaySection> {
               scrollDirection: Axis.horizontal,
               itemCount: widget.hours.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (context, index) => _HourTile(hour: widget.hours[index]),
+              itemBuilder: (context, index) => _HourTile(hour: widget.hours[index], isHighlighted: index == _highlightIndex),
             ),
           ),
         ),
@@ -163,9 +215,12 @@ class _DaySectionState extends State<_DaySection> {
 }
 
 class _HourTile extends StatelessWidget {
-  final ScoredHour hour;
+  static const double width = 84;
 
-  const _HourTile({required this.hour});
+  final ScoredHour hour;
+  final bool isHighlighted;
+
+  const _HourTile({required this.hour, this.isHighlighted = false});
 
   @override
   Widget build(BuildContext context) {
@@ -176,12 +231,14 @@ class _HourTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      width: 84,
+      width: width,
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        color: isHighlighted ? color.withValues(alpha: 0.18) : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(14),
-        border: Border(top: BorderSide(color: color, width: 3)),
+        // A non-uniform Border can't be combined with borderRadius, so the
+        // highlighted tile swaps the rating top-stripe for a full outline.
+        border: isHighlighted ? Border.all(color: color, width: 2) : Border(top: BorderSide(color: color, width: 3)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

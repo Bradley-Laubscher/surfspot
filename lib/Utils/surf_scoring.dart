@@ -1,4 +1,5 @@
 import 'package:surfspot/Utils/compass.dart';
+import 'package:surfspot/Utils/formatting.dart';
 
 /// One hour of parsed forecast data for a spot.
 class HourlyReading {
@@ -182,6 +183,12 @@ class SurfWindow {
   final int totalPoints;
 
   const SurfWindow({required this.start, required this.end, required this.bestHour, required this.totalPoints});
+
+  /// "9 AM - 11 AM", or just "9 AM" for a single-hour window.
+  String get timeLabel {
+    final from = formatHour(start.reading.time);
+    return identical(start, end) ? from : "$from - ${formatHour(end.reading.time)}";
+  }
 }
 
 SurfWindow? bestWindowInDay(List<ScoredHour> dayHours, {int windowSize = 3}) {

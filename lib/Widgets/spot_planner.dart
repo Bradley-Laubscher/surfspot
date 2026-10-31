@@ -50,7 +50,8 @@ class SpotPlanner extends StatelessWidget {
     }
 
     final day = conditions.selectedDay;
-    final ranking = conditions.rankingFor(day);
+    final hour = conditions.selectedHour;
+    final ranking = conditions.rankingFor(day, hour: hour);
     if (conditions.error != null || ranking.isEmpty) {
       return Row(
         children: [
@@ -68,18 +69,19 @@ class SpotPlanner extends StatelessWidget {
 
     final best = ranking.first;
     final window = best.window;
-    final today = isToday(day);
+    final spotOfTheDay = isToday(day) && hour == null;
+    final at = hour != null ? " AT ${formatHour(DateTime(day.year, day.month, day.day, hour))}" : "";
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Icon(today ? Icons.emoji_events_rounded : Icons.event_available_rounded, color: AppColors.sunsetGold, size: 20),
+            Icon(spotOfTheDay ? Icons.emoji_events_rounded : Icons.event_available_rounded, color: AppColors.sunsetGold, size: 20),
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                today ? "SPOT OF THE DAY" : "BEST SPOT FOR ${dayLabel(day).toUpperCase()}",
+                spotOfTheDay ? "SPOT OF THE DAY" : "BEST SPOT FOR ${dayLabel(day).toUpperCase()}$at",
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: Colors.white70,
                       letterSpacing: 2,
@@ -90,6 +92,8 @@ class SpotPlanner extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _DayPicker(conditions: conditions),
+        const SizedBox(height: 8),
+        _HourPicker(conditions: conditions),
         const SizedBox(height: 16),
         // Wrap (not Row) so a long spot name can never force the rating pill
         // off the edge - it just drops to its own line instead of erroring.
@@ -112,7 +116,7 @@ class SpotPlanner extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        _conditionSummary(context, window),
+        _conditionSummary(context, window, isSpecificHour: hour != null),
         const SizedBox(height: 14),
         _WhyThisSpot(hour: window.bestHour),
         const SizedBox(height: 16),
@@ -154,7 +158,7 @@ class SpotPlanner extends StatelessWidget {
     }
   }
 
-  Widget _conditionSummary(BuildContext context, SurfWindow window) {
+  Widget _conditionSummary(BuildContext context, SurfWindow window, {required bool isSpecificHour}) {
     final reading = window.bestHour.reading;
     final windDirection = reading.windDirection;
     final windSpeed = reading.windSpeed;
@@ -175,7 +179,7 @@ class SpotPlanner extends StatelessWidget {
           ),
         _InfoChip(
           icon: Icons.schedule_rounded,
-          label: "Best ${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}",
+          label: "${isSpecificHour ? 'At' : 'Best'} ${window.timeLabel}",
         ),
       ],
     );
@@ -278,6 +282,107 @@ class _DayChip extends StatelessWidget {
   }
 }
 
+/// Horizontal row of times for the selected day: "Any time" recommends the
+/// best window of the day, while a specific hour ranks spots on conditions
+/// at that hour. Each hour is marked with the best rating any spot reaches.
+class _HourPicker extends StatefulWidget {
+  final SurfConditionsProvider conditions;
+
+  const _HourPicker({required this.conditions});
+
+  @override
+  State<_HourPicker> createState() => _HourPickerState();
+}
+
+class _HourPickerState extends State<_HourPicker> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final conditions = widget.conditions;
+    final day = conditions.selectedDay;
+    final hours = conditions.selectableHoursFor(day);
+    final selected = conditions.selectedHour;
+
+    return SizedBox(
+      height: 36,
+      child: HorizontalWheelScroll(
+        controller: _scrollController,
+        child: ListView.separated(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          itemCount: hours.length + 1,
+          separatorBuilder: (_, __) => const SizedBox(width: 6),
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return _HourChip(
+                label: "Any time",
+                bestRating: null,
+                isSelected: selected == null,
+                onTap: () => conditions.selectHour(null),
+              );
+            }
+            final hour = hours[index - 1];
+            return _HourChip(
+              label: formatHour(DateTime(day.year, day.month, day.day, hour)),
+              bestRating: conditions.recommendationFor(day, hour: hour)?.window.bestHour.rating,
+              isSelected: hour == selected,
+              onTap: () => conditions.selectHour(hour),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _HourChip extends StatelessWidget {
+  final String label;
+  final SurfRating? bestRating;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _HourChip({required this.label, required this.bestRating, required this.isSelected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = isSelected ? AppColors.deepOcean : Colors.white;
+    final bestRating = this.bestRating;
+
+    return Material(
+      color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label, style: TextStyle(color: foreground, fontSize: 12, fontWeight: FontWeight.w600)),
+              if (bestRating != null) ...[
+                const SizedBox(width: 6),
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(shape: BoxShape.circle, color: surfRatingColor(bestRating)),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The factors behind the recommended hour's score, strongest first, so the
 /// recommendation reads as reasoning rather than an opaque pick.
 class _WhyThisSpot extends StatelessWidget {
@@ -355,7 +460,7 @@ class _RunnerUpRow extends StatelessWidget {
               ),
             ),
             Text(
-              "${formatHour(window.start.reading.time)} - ${formatHour(window.end.reading.time)}",
+              window.timeLabel,
               style: const TextStyle(color: Colors.white70, fontSize: 12),
             ),
             const SizedBox(width: 10),

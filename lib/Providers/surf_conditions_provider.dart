@@ -25,6 +25,24 @@ class SpotForecast {
     if (dayHours.isEmpty) return null;
     return bestWindowInDay(dayHours);
   }
+
+  /// Conditions at exactly [hour] o'clock on [day], as a single-hour window
+  /// so it can be ranked and displayed like a regular surf window. Null if
+  /// that hour isn't in the forecast or has already passed.
+  SurfWindow? windowAt(DateTime day, int hour) {
+    final cutoff = DateTime.now().subtract(const Duration(hours: 1));
+    for (final h in hours) {
+      final time = h.reading.time;
+      if (isSameDay(time, day) && time.hour == hour && time.isAfter(cutoff)) {
+        return SurfWindow(start: h, end: h, bestHour: h, totalPoints: h.points);
+      }
+    }
+    return null;
+  }
+
+  /// The window to show for [day]: conditions at [hour] if the user picked
+  /// a specific time, otherwise the best 3-hour stretch of the day.
+  SurfWindow? windowFor(DateTime day, {int? hour}) => hour == null ? bestWindowOn(day) : windowAt(day, hour);
 }
 
 /// A spot paired with its best surf window on a particular day.
@@ -43,6 +61,7 @@ class SurfConditionsProvider with ChangeNotifier {
   final Map<String, SpotForecast> _forecasts = {};
   List<DateTime> _plannableDays = [];
   DateTime? _selectedDay;
+  int? _selectedHour;
   bool _isLoading = true;
   String? _error;
 
@@ -73,13 +92,40 @@ class SurfConditionsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Every spot with a surf window on [day], best first. Ranked by total
-  /// points across each spot's best 3 daylight hours, then by its single
-  /// best hour, then favouring the more accessible (lower difficulty) spot.
-  List<SpotRecommendation> rankingFor(DateTime day) {
+  /// The hour the user wants to surf on [selectedDay], or null for "any
+  /// time" (recommend the best window of the day). Falls back to null if
+  /// the picked hour isn't available on the selected day, e.g. it has
+  /// already passed today.
+  int? get selectedHour {
+    final hour = _selectedHour;
+    return hour != null && selectableHoursFor(selectedDay).contains(hour) ? hour : null;
+  }
+
+  void selectHour(int? hour) {
+    _selectedHour = hour;
+    notifyListeners();
+  }
+
+  /// Daylight hours on [day] that at least one spot still has forecast data
+  /// for - the same daylight range the best-window search considers.
+  List<int> selectableHoursFor(DateTime day) {
+    return [
+      for (int hour = 6; hour <= 19; hour++)
+        if (_forecasts.values.any((f) => f.windowAt(day, hour) != null)) hour,
+    ];
+  }
+
+  /// The window to show for [forecast] given the user's selected day and hour.
+  SurfWindow? selectedWindowFor(SpotForecast forecast) => forecast.windowFor(selectedDay, hour: selectedHour);
+
+  /// Every spot with a surf window on [day], best first. With no [hour],
+  /// ranked by total points across each spot's best 3 daylight hours; with
+  /// an [hour], by that hour's points alone. Ties go to the higher single
+  /// hour, then to the more accessible (lower difficulty) spot.
+  List<SpotRecommendation> rankingFor(DateTime day, {int? hour}) {
     final ranking = <SpotRecommendation>[
       for (final forecast in _forecasts.values)
-        if (forecast.bestWindowOn(day) case final window?) SpotRecommendation(forecast: forecast, window: window),
+        if (forecast.windowFor(day, hour: hour) case final window?) SpotRecommendation(forecast: forecast, window: window),
     ];
     ranking.sort((a, b) {
       final byTotal = b.window.totalPoints.compareTo(a.window.totalPoints);
@@ -91,9 +137,10 @@ class SurfConditionsProvider with ChangeNotifier {
     return ranking;
   }
 
-  /// The best spot to surf on [day], if any spot has a window that day.
-  SpotRecommendation? recommendationFor(DateTime day) {
-    final ranking = rankingFor(day);
+  /// The best spot to surf on [day] (at [hour], if given), if any spot has
+  /// a window then.
+  SpotRecommendation? recommendationFor(DateTime day, {int? hour}) {
+    final ranking = rankingFor(day, hour: hour);
     return ranking.isEmpty ? null : ranking.first;
   }
 

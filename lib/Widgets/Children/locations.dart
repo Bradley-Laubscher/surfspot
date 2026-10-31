@@ -44,7 +44,7 @@ class _LocationListState extends State<LocationList> {
             final spot = locations[index];
             final isSelected = spot["name"] == selectedName;
             final forecast = conditions.forecastFor(spot["name"]);
-            final dayRating = forecast?.bestWindowOn(conditions.selectedDay)?.bestHour.rating;
+            final dayRating = forecast != null ? conditions.selectedWindowFor(forecast)?.bestHour.rating : null;
 
             return _LocationCard(
               spot: spot,
